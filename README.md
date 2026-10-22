@@ -43,6 +43,4 @@ Run the compiled application binary straight from your favorite terminal workspa
 ## ⚙️ Configuration
 Salvoq scales to your terminal screen layouts automatically. It reads hardware sizes via system queries to stretch columns cleanly whether tiled in minimal setups or maximized full-screen.
 
-## 📄 License
-This project is licensed under the MIT License - see the LICENSE file for details.
 
