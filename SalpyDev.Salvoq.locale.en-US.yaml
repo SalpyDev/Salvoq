@@ -1,0 +1,17 @@
+PackageIdentifier: SalpyDev.Salvoq
+PackageVersion: __VERSION__
+PackageLocale: en-US
+Publisher: SalpyDev
+PackageName: Salvoq
+PackageUrl: https://github.com/__OWNER__/__REPO__
+License: MIT
+ShortDescription: Dependency-free terminal audio visualizer for Windows, written in pure C.
+Moniker: salvoq
+Tags:
+  - audio
+  - visualizer
+  - terminal
+  - cli
+  - wasapi
+ManifestType: defaultLocale
+ManifestVersion: 1.6.0

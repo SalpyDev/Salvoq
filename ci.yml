@@ -1,0 +1,35 @@
+name: ci
+on: [push, pull_request]
+jobs:
+  build-test:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: true
+          install: mingw-w64-x86_64-gcc make
+      - run: make
+      - run: make debug
+      - run: make test
+      - name: Exit-code checks
+        run: |
+          expect() { want=$1; shift; "$@" >/dev/null 2>&1 && rc=0 || rc=$?; [ "$rc" -eq "$want" ] || { echo "FAIL: $* exited $rc, wanted $want"; exit 1; }; }
+          expect 0 build/salvoq.exe --version
+          expect 0 build/salvoq.exe --help
+          expect 0 build/salvoq.exe --selftest
+          expect 1 build/salvoq.exe --bogus
+          expect 1 build/salvoq.exe --app
+          expect 1 build/salvoq.exe --app a.exe --app b.exe --app c.exe
+          expect 1 build/salvoq.exe --app a.exe --app a.exe
+          expect 1 build/salvoq.exe --app a.exe --test-tone
+          expect 1 build/salvoq.exe --split sideways
+      - run: make dist-win
+      - uses: actions/upload-artifact@v4
+        with:
+          name: salvoq-exe
+          path: dist/salvoq.exe

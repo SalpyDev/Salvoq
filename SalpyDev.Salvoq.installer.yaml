@@ -1,0 +1,13 @@
+PackageIdentifier: SalpyDev.Salvoq
+PackageVersion: __VERSION__
+InstallerType: portable
+Commands:
+  - salvoq
+MinimumOSVersion: 10.0.10586.0
+ReleaseDate: __DATE__
+Installers:
+  - Architecture: x64
+    InstallerUrl: https://github.com/__OWNER__/__REPO__/releases/download/v__VERSION__/salvoq.exe
+    InstallerSha256: __SHA256__
+ManifestType: installer
+ManifestVersion: 1.6.0
