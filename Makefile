@@ -33,6 +33,7 @@ test: build/salvoq.exe
 	./build/salvoq.exe --selftest
 
 dist-win: clean
+	mkdir -p dist
 	$(CC) $(CSTD) $(WARN) -O3 -mtune=generic -DNDEBUG $(LTO) -DSALVOQ_VERSION=\"$(VERSION)\" -Isrc $(SRC) -static -static-libgcc $(LIBS) -o dist/salvoq.exe
 
 clean:

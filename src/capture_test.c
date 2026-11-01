@@ -2,6 +2,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
+#include <windows.h>
 #include "capture.h"
 #include "platform.h"
 #include "common.h"
@@ -32,7 +33,9 @@ static DWORD WINAPI test_thread(void *arg) {
 
 int capture_start_test(capture_source *s) {
     strcpy(s->name, "TEST TONE");
+    atomic_init(&s->ring.head, 0);
+    atomic_init(&s->ring.tail, 0);
+    atomic_init(&s->ring.overflow, 0);
     atomic_store(&s->running, 1);
-    plat_thread t;
-    return plat_thread_create(&t, test_thread, s);
+    return plat_thread_create(&s->thread, test_thread, s);
 }

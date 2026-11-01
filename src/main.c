@@ -53,6 +53,13 @@ static void usage(FILE *f) {
 "Environment: SALVOQ_DEVICE=partial playback-device name; ignored by --test-tone and --app.\n");
 }
 
+static int valid_theme(const char *name) {
+    return !strcmp(name, "classic") || !strcmp(name, "neon") ||
+           !strcmp(name, "ocean") || !strcmp(name, "ember") ||
+           !strcmp(name, "mono") || !strcmp(name, "synthwave") ||
+           !strcmp(name, "luna");
+}
+
 static int parse_color(const char *s, uint8_t out[3]) {
     if (strlen(s) != 7 || s[0] != '#') return -1;
     unsigned v = (unsigned)strtoul(s + 1, NULL, 16);
@@ -65,6 +72,7 @@ int main(int argc, char **argv) {
     const char *theme_name = "classic";
     int bars = 64, fps = 60, idle_fps = 15, test = 0, selftest = 0;
     float floor_db = -80, ceil_db = 0, tilt = 0, decay = 0.85f;
+    double freq_lo = 20.0, freq_hi = 20000.0;
     float peak_hold = 1.0f, peak_fall = 0.6f;
     int smooth = 0, apps = 0;
     char app_names[2][128] = {{0}};
@@ -80,7 +88,7 @@ int main(int argc, char **argv) {
         else if (!strcmp(a, "--test-tone")) test = 1;
         else if (!strcmp(a, "--fps") && i + 1 < argc) { fps = atoi(argv[++i]); if (fps < 1 || fps > 120) { usage(stderr); return 1; } }
         else if (!strcmp(a, "--idle-fps") && i + 1 < argc) { idle_fps = atoi(argv[++i]); if (idle_fps < 1 || idle_fps > 120) { usage(stderr); return 1; } }
-        else if (!strcmp(a, "--theme") && i + 1 < argc) { theme_name = argv[++i]; theme_load(&th, theme_name); }
+        else if (!strcmp(a, "--theme") && i + 1 < argc) { theme_name = argv[++i]; if (!valid_theme(theme_name)) { usage(stderr); return 1; } theme_load(&th, theme_name); }
         else if (!strcmp(a, "--bars") && i + 1 < argc) { bars = atoi(argv[++i]); if (bars != 16 && bars != 32 && bars != 64 && bars != 128) { usage(stderr); return 1; } }
         else if (!strcmp(a, "--db-range") && i + 1 < argc) { if (sscanf(argv[++i], "%f,%f", &floor_db, &ceil_db) != 2 || floor_db < -120 || floor_db > -20 || ceil_db < -20 || ceil_db > 0 || ceil_db <= floor_db) { usage(stderr); return 1; } }
         else if (!strcmp(a, "--tilt") && i + 1 < argc) { tilt = (float)atof(argv[++i]); if (tilt < -6 || tilt > 6) { usage(stderr); return 1; } }
@@ -89,8 +97,8 @@ int main(int argc, char **argv) {
         else if (!strcmp(a, "--peak-hold") && i + 1 < argc) { peak_hold = (float)atof(argv[++i]); if (peak_hold < 0 || peak_hold > 10) { usage(stderr); return 1; } }
         else if (!strcmp(a, "--peak-fall") && i + 1 < argc) { peak_fall = (float)atof(argv[++i]); if (peak_fall < 0 || peak_fall > 5) { usage(stderr); return 1; } }
         else if (!strcmp(a, "--tint") && i + 1 < argc) { const char *v = argv[++i]; if (!strcmp(v, "off")) th.tint = 0; else if (strcmp(v, "on")) { usage(stderr); return 1; } else th.tint = 1; }
-        else if (!strcmp(a, "--tint-strength") && i + 1 < argc) { int v = atoi(argv[++i]); if (v < 0 || v > 100) { usage(stderr); return 1; } }
-        else if (!strcmp(a, "--tint-height") && i + 1 < argc) { int v = atoi(argv[++i]); if (v < 0 || v > 100) { usage(stderr); return 1; } }
+        else if (!strcmp(a, "--tint-strength") && i + 1 < argc) { int v = atoi(argv[++i]); if (v < 0 || v > 100) { usage(stderr); return 1; } th.tint_strength = v; }
+        else if (!strcmp(a, "--tint-height") && i + 1 < argc) { int v = atoi(argv[++i]); if (v < 0 || v > 100) { usage(stderr); return 1; } th.tint_height = v; }
         else if (!strcmp(a, "--mirror") && i + 1 < argc) { const char *v = argv[++i]; th.mirror = !strcmp(v, "on"); if (!th.mirror && strcmp(v, "off")) { usage(stderr); return 1; } }
         else if (!strcmp(a, "--bar-gap") && i + 1 < argc) { const char *v = argv[++i]; if (!strcmp(v, "on")) th.gap = 1; else if (!strcmp(v, "off")) th.gap = 0; else if (strcmp(v, "auto")) { usage(stderr); return 1; } }
         else if (!strcmp(a, "--charset") && i + 1 < argc) { const char *v = argv[++i]; if (!strcmp(v, "ascii")) th.ascii = 1; else if (strcmp(v, "blocks")) { usage(stderr); return 1; } }
@@ -99,10 +107,22 @@ int main(int argc, char **argv) {
         else if (!strcmp(a, "--bg") && i + 1 < argc) { if (parse_color(argv[++i], th.bg.rgb)) { usage(stderr); return 1; } }
         else if (!strcmp(a, "--band-color") && i + 1 < argc) {
             char *v = argv[++i], *eq = strchr(v, '=');
-            if (!eq || parse_color(eq + 1, (uint8_t[3]){0})) { usage(stderr); return 1; }
+            uint8_t rgb[3];
+            if (!eq || parse_color(eq + 1, rgb)) { usage(stderr); return 1; }
+            if (!strcmp(v, "bass")) memcpy(th.bass.rgb, rgb, 3);
+            else if (!strcmp(v, "mids")) memcpy(th.mids.rgb, rgb, 3);
+            else if (!strcmp(v, "treble")) memcpy(th.treble.rgb, rgb, 3);
+            else { usage(stderr); return 1; }
         }
-        else if (!strcmp(a, "--gradient") && i + 1 < argc) { i++; }
-        else if (!strcmp(a, "--freq-range") && i + 1 < argc) { float lo, hi; if (sscanf(argv[++i], "%f,%f", &lo, &hi) != 2 || lo < 20 || lo > 20000 || hi <= lo) { usage(stderr); return 1; } }
+        else if (!strcmp(a, "--gradient") && i + 1 < argc) {
+            char gradient[256];
+            strncpy(gradient, argv[++i], sizeof gradient - 1); gradient[sizeof gradient - 1] = 0;
+            char *part = strtok(gradient, ","); int count = 0;
+            while (part && count < 6 && parse_color(part, th.grad[count].rgb) == 0) { count++; part = strtok(NULL, ","); }
+            if (part || count < 2) { usage(stderr); return 1; }
+            th.grad_count = count;
+        }
+        else if (!strcmp(a, "--freq-range") && i + 1 < argc) { if (sscanf(argv[++i], "%lf,%lf", &freq_lo, &freq_hi) != 2 || freq_lo < 20 || freq_lo > 20000 || freq_hi <= freq_lo || freq_hi > 20000) { usage(stderr); return 1; } }
         else if (!strcmp(a, "--style") && i + 1 < argc) { const char *v = argv[++i]; if (!strcmp(v, "polished")) fprintf(stderr, "salvoq: --style polished was removed; using classic\n"); else if (strcmp(v, "classic")) { usage(stderr); return 1; } }
         else if (!strcmp(a, "--app") && i + 1 < argc) {
             if (test || apps >= 2) { usage(stderr); return 1; }
@@ -128,7 +148,7 @@ int main(int argc, char **argv) {
             strcpy(sources[i].label, "SYSTEM");
             if (capture_start_wasapi(&sources[i].cap, getenv("SALVOQ_DEVICE")) != 0) return 2;
         }
-        analysis_init(&sources[i].an, bars, floor_db, ceil_db, tilt, decay, smooth, peak_hold, peak_fall);
+        analysis_init(&sources[i].an, bars, floor_db, ceil_db, tilt, decay, smooth, peak_hold, peak_fall, freq_lo, freq_hi);
     }
 
     canvas cv;

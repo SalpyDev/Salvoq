@@ -2,6 +2,7 @@
 #include "render.h"
 #include <math.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 static void hex(const char *s, color *c) {
@@ -12,6 +13,7 @@ static void hex(const char *s, color *c) {
 void theme_load(theme *t, const char *name) {
     memset(t, 0, sizeof *t);
     t->tint = 1; t->gap = -1; t->color_depth = -1;
+    t->tint_strength = 60; t->tint_height = 25; t->grad_count = 3;
     if (!strcmp(name, "neon")) { hex("#00FFA3", &t->grad[0]); hex("#FFF200", &t->grad[1]); hex("#FF00A8", &t->grad[2]); hex("#B600FF", &t->bass); hex("#00F0FF", &t->mids); hex("#3D5AFE", &t->treble); }
     else if (!strcmp(name, "ocean")) { hex("#023E8A", &t->grad[0]); hex("#00B4D8", &t->grad[1]); hex("#CAF0F8", &t->grad[2]); hex("#0077B6", &t->bass); hex("#48CAE4", &t->mids); hex("#90E0EF", &t->treble); }
     else if (!strcmp(name, "ember")) { hex("#7F1D1D", &t->grad[0]); hex("#F97316", &t->grad[1]); hex("#FDE68A", &t->grad[2]); hex("#DC2626", &t->bass); hex("#F97316", &t->mids); hex("#FACC15", &t->treble); }
@@ -25,6 +27,14 @@ void theme_load(theme *t, const char *name) {
 static void blend(color a, color b, float w, color *out) {
     for (int i = 0; i < 3; i++)
         out->rgb[i] = (uint8_t)(a.rgb[i] + (b.rgb[i] - a.rgb[i]) * w + 0.5f);
+}
+
+static void gradient_color(const theme *t, float fraction, color *out) {
+    if (fraction <= 0.0f) { *out = t->grad[0]; return; }
+    if (fraction >= 1.0f) { *out = t->grad[t->grad_count - 1]; return; }
+    float scaled = fraction * (float)(t->grad_count - 1);
+    int index = (int)scaled;
+    blend(t->grad[index], t->grad[index + 1], scaled - (float)index, out);
 }
 
 static const char *blocks[8] = {" ", "\xe2\x96\x81", "\xe2\x96\x82", "\xe2\x96\x83", "\xe2\x96\x84", "\xe2\x96\x85", "\xe2\x96\x86", "\xe2\x96\x87"};
@@ -51,12 +61,12 @@ void render_frame(canvas *c, analysis *a, const theme *t, const char *status) {
             float level = (float)(meter_rows - 1 - r) / meter_rows;
             if (v <= level) continue;
             color base;
-            if (th <= 0.5f) blend(t->grad[0], t->grad[1], th / 0.5f, &base);
-            else blend(t->grad[1], t->grad[2], (th - 0.5f) / 0.5f, &base);
+            gradient_color(t, th, &base);
             color out = base;
-            if (t->tint) {
+            if (t->tint && t->tint_height > 0) {
                 color tint = th < 0.125f ? t->bass : (th < 0.375f ? t->mids : t->treble);
-                float w = 0.6f * (1.0f - th / 0.25f);
+                float height = (float)t->tint_height / 100.0f;
+                float w = (float)t->tint_strength / 100.0f * (1.0f - th / height);
                 if (w > 0) blend(base, tint, w, &out);
             }
             for (int x = 0; x < bar_w; x++)

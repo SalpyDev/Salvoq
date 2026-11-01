@@ -6,6 +6,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 static int fail;
 static void check(int ok, const char *msg) {
@@ -43,7 +44,7 @@ int selftest_run(void) {
         double e = hypot(re[k] - sr, im[k] - si);
         if (e > maxerr) maxerr = e;
     }
-    check(maxerr < 1e-2, "FFT matches DFT");
+    check(maxerr < 1e-4, "FFT matches DFT");
     const float *w = window_get();
     check(fabsf(w[0]) < 1e-6f && fabsf(w[n - 1]) < 1e-6f, "Hann endpoints");
     int sym = 1;

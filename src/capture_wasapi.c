@@ -130,8 +130,9 @@ fail:
 
 int capture_start_wasapi(capture_source *s, const char *device) {
     (void)device;
+    atomic_init(&s->ring.head, 0);
+    atomic_init(&s->ring.tail, 0);
+    atomic_init(&s->ring.overflow, 0);
     atomic_store(&s->running, 1);
-    plat_thread t;
-    if (plat_thread_create(&t, wasapi_thread, s) != 0) return -1;
-    return 0;
+    return plat_thread_create(&s->thread, wasapi_thread, s);
 }

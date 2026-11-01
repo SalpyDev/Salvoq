@@ -28,6 +28,7 @@ jobs:
           expect 1 build/salvoq.exe --app a.exe --app a.exe
           expect 1 build/salvoq.exe --app a.exe --test-tone
           expect 1 build/salvoq.exe --split sideways
+          expect 2 build/salvoq.exe --app salvoq-no-such-app.exe
       - run: make dist-win
       - uses: actions/upload-artifact@v4
         with:

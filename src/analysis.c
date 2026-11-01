@@ -7,7 +7,8 @@
 #include <string.h>
 
 void analysis_init(analysis *a, int bars, float floor_db, float ceil_db, float tilt,
-                   float decay, int smooth, double peak_hold, double peak_fall) {
+                   float decay, int smooth, double peak_hold, double peak_fall,
+                   double freq_lo, double freq_hi) {
     memset(a, 0, sizeof *a);
     a->bars = bars;
     a->db_floor = floor_db;
@@ -17,6 +18,8 @@ void analysis_init(analysis *a, int bars, float floor_db, float ceil_db, float t
     a->smooth_attack = smooth;
     a->peak_hold = peak_hold;
     a->peak_fall = peak_fall;
+    a->freq_lo = freq_lo;
+    a->freq_hi = freq_hi;
     fft_init(SALVOQ_FFT_SIZE);
     window_init(SALVOQ_FFT_SIZE);
 }
@@ -31,11 +34,13 @@ static float bin_value(const analysis *a, double freq) {
 }
 
 void analysis_update(analysis *a, ringbuf *ring, double now_ns) {
-    float incoming[SALVOQ_RING_CAPACITY];
-    size_t got = rb_read(ring, incoming, SALVOQ_RING_CAPACITY);
-    if (got >= SALVOQ_HOP) {
-        memmove(a->history, a->history + got, (SALVOQ_FFT_SIZE - got) * sizeof(float));
-        memcpy(a->history + SALVOQ_FFT_SIZE - got, incoming, got * sizeof(float));
+    float incoming[SALVOQ_HOP];
+    size_t got;
+    while ((got = rb_read(ring, incoming, SALVOQ_HOP)) == SALVOQ_HOP) {
+        memmove(a->history, a->history + SALVOQ_HOP,
+                (SALVOQ_FFT_SIZE - SALVOQ_HOP) * sizeof(float));
+        memcpy(a->history + SALVOQ_FFT_SIZE - SALVOQ_HOP, incoming,
+               SALVOQ_HOP * sizeof(float));
         window_apply(a->history, a->re, SALVOQ_FFT_SIZE);
         memset(a->im, 0, sizeof a->im);
         fft_forward(a->re, a->im, SALVOQ_FFT_SIZE);
@@ -51,9 +56,10 @@ void analysis_update(analysis *a, ringbuf *ring, double now_ns) {
         double dt = (now_ns - a->last_frame_ns) / 1e9;
         if (dt <= 0) dt = 1.0 / 60.0;
         for (int i = 0; i < a->bars; i++) {
-            double lo = 20.0 * pow(1000.0, (double)i / a->bars);
-            double hi = 20.0 * pow(1000.0, (double)(i + 1) / a->bars);
-            double center = 20.0 * pow(1000.0, ((double)i + 0.5) / a->bars);
+            double ratio = a->freq_hi / a->freq_lo;
+            double lo = a->freq_lo * pow(ratio, (double)i / a->bars);
+            double hi = a->freq_lo * pow(ratio, (double)(i + 1) / a->bars);
+            double center = a->freq_lo * pow(ratio, ((double)i + 0.5) / a->bars);
             float maxm = 0.0f;
             int covered = 0;
             for (size_t k = 1; k <= SALVOQ_FFT_SIZE / 2; k++) {
@@ -67,9 +73,10 @@ void analysis_update(analysis *a, ringbuf *ring, double now_ns) {
             if (v > 1) v = 1;
             float old = a->values[i], nv = (float)v;
             float out;
-            if (a->smooth_attack) out = old + (nv - old) * 0.5f;
-            else out = nv > old ? nv : old;
-            out = out * a->decay;
+            if (nv >= old)
+                out = a->smooth_attack ? old + (nv - old) * 0.5f : nv;
+            else
+                out = old * a->decay;
             if (out < nv) out = nv;
             if (out < 0.001f) out = 0.0f;
             a->values[i] = out;
