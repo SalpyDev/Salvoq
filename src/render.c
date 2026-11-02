@@ -39,6 +39,24 @@ static void gradient_color(const theme *t, float fraction, color *out) {
 
 static const char *blocks[8] = {" ", "\xe2\x96\x81", "\xe2\x96\x82", "\xe2\x96\x83", "\xe2\x96\x84", "\xe2\x96\x85", "\xe2\x96\x86", "\xe2\x96\x87"};
 
+static float visual_value(const analysis *a, int visual_index, int visual_bars) {
+    int first = visual_index * a->bars / visual_bars;
+    int last = (visual_index + 1) * a->bars / visual_bars;
+    float value = 0.0f;
+    for (int i = first; i < last; i++)
+        if (a->values[i] > value) value = a->values[i];
+    return value;
+}
+
+static float visual_peak(const analysis *a, int visual_index, int visual_bars) {
+    int first = visual_index * a->bars / visual_bars;
+    int last = (visual_index + 1) * a->bars / visual_bars;
+    float peak = 0.0f;
+    for (int i = first; i < last; i++)
+        if (a->peaks[i] > peak) peak = a->peaks[i];
+    return peak;
+}
+
 void render_frame(canvas *c, analysis *a, const theme *t, const char *status) {
     canvas_clear(c);
     int meter_rows = c->rows - 2;
@@ -47,14 +65,15 @@ void render_frame(canvas *c, analysis *a, const theme *t, const char *status) {
         canvas_flush(c);
         return;
     }
-    int gap = (t->gap == 1 || (t->gap < 0 && c->cols >= 128)) ? 1 : 0;
-    int unit = (c->cols + gap) / a->bars;
+    const int visual_bars = a->bars < 26 ? a->bars : 26;
+    int gap = (t->gap == 0) ? 0 : 1;
+    int unit = (c->cols + gap) / visual_bars;
     int bar_w = unit - gap;
     if (bar_w < 1) bar_w = 1;
-    int left = (c->cols - (a->bars * unit - gap)) / 2;
+    int left = (c->cols - (visual_bars * unit - gap)) / 2;
     if (left < 0) left = 0;
-    for (int i = 0; i < a->bars; i++) {
-        float v = a->values[i];
+    for (int i = 0; i < visual_bars; i++) {
+        float v = visual_value(a, i, visual_bars);
         int x0 = left + i * unit;
         for (int r = 0; r < meter_rows; r++) {
             float th = (float)r / (meter_rows - 1);
@@ -72,20 +91,22 @@ void render_frame(canvas *c, analysis *a, const theme *t, const char *status) {
             for (int x = 0; x < bar_w; x++)
                 canvas_set(c, x0 + x, r, t->ascii ? "#" : blocks[7], (uint8_t[6]){out.rgb[0], out.rgb[1], out.rgb[2], 0,0,0});
         }
-        if (a->peaks[i] > 0.01f) {
-            int py = meter_rows - 1 - (int)(a->peaks[i] * (meter_rows - 1));
-            if (py >= 0 && py < meter_rows)
-                for (int x = 0; x < bar_w; x++)
-                    canvas_set(c, x0 + x, py, " ", (uint8_t[6]){0,0,0,255,255,255});
+        float peak = visual_peak(a, i, visual_bars);
+        if (peak > 0.01f) {
+            int py = meter_rows - 1 - (int)(peak * (meter_rows - 1));
+            if (py >= 0 && py < meter_rows) {
+                canvas_set(c, x0, py, "[", (uint8_t[6]){255,255,255,0,0,0});
+                if (bar_w > 2) canvas_set(c, x0 + bar_w - 1, py, "]", (uint8_t[6]){255,255,255,0,0,0});
+            }
         }
     }
     const char *labels[3] = {"BASS", "MIDS", "TREBLE"};
-    int starts[3] = {0, a->bars / 4, (a->bars * 4) / 5};
+    int starts[3] = {0, visual_bars / 3, (visual_bars * 2) / 3};
     for (int b = 0; b < 3; b++) {
-        int end = b == 2 ? a->bars : starts[b + 1];
+        int end = b == 2 ? visual_bars : starts[b + 1];
         int cx = left + ((starts[b] + end) / 2) * unit;
         for (int k = 0; labels[b][k]; k++)
-            canvas_set(c, cx + k - 2, meter_rows, (char[2]){labels[b][k], 0}, (uint8_t[6]){170,170,170,0,0,0});
+            canvas_set(c, cx + k - 2, meter_rows, (char[2]){labels[b][k], 0}, (uint8_t[6]){150,150,150,0,0,0});
     }
     for (int k = 0; status[k] && k < c->cols; k++)
         canvas_set(c, k, meter_rows + 1, (char[2]){status[k], 0}, (uint8_t[6]){170,170,170,0,0,0});

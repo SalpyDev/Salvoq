@@ -156,7 +156,6 @@ int main(int argc, char **argv) {
     plat_size(&cols, &rows);
     canvas_init(&cv, cols, rows);
     uint64_t next = plat_now_ns();
-    unsigned long drops = 0;
     int current_fps = fps;
 
     while (atomic_load(&running)) {
@@ -172,9 +171,7 @@ int main(int argc, char **argv) {
         }
         current_fps = all_zero ? idle_fps : fps;
         char status[128];
-        snprintf(status, sizeof status, "fps %d | buf %zu%% | drops %lu%s",
-            current_fps, rb_fill(&sources[0].cap.ring) * 100 / SALVOQ_RING_CAPACITY, drops,
-            test ? " | TEST TONE" : (apps ? " | APP" : ""));
+        snprintf(status, sizeof status, "\xE2\x80\xBA 44.1kHz \xE2\x80\xA2 sample 1024 \xE2\x80\xA2 gain 0.0dB \xE2\x80\xA2 fps %d", current_fps);
         render_frame(&cv, &sources[0].an, &th, status);
         next += 1000000000ULL / (unsigned)current_fps;
         uint64_t now2 = plat_now_ns();
