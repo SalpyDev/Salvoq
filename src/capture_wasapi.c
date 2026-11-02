@@ -18,6 +18,9 @@ static const PROPERTYKEY salvoq_device_friendly_name = {
     {0xa45c254e, 0xdf1c, 0x4efd, {0x80, 0x20, 0x67, 0xd1, 0x46, 0xa8, 0x50, 0xe0}},
     14
 };
+static const GUID salvoq_ieee_float_subtype = {
+    0x00000003, 0x0000, 0x0010, {0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71}
+};
 
 static void push_silence(capture_source *s, uint64_t t0, uint64_t *pushed) {
     uint64_t due = ((plat_now_ns() - t0) * SALVOQ_SAMPLE_RATE / 1000000000ULL) - *pushed;
@@ -126,7 +129,7 @@ static void wasapi_thread(void *arg) {
         fmt.Format.cbSize = 22;
         fmt.Samples.wValidBitsPerSample = 32;
         fmt.dwChannelMask = SPEAKER_FRONT_LEFT | SPEAKER_FRONT_RIGHT;
-        fmt.SubFormat = KSDATAFORMAT_SUBTYPE_IEEE_FLOAT;
+        fmt.SubFormat = salvoq_ieee_float_subtype;
         hr = IAudioClient_Initialize(client, AUDCLNT_SHAREMODE_SHARED,
             AUDCLNT_STREAMFLAGS_LOOPBACK | AUDCLNT_STREAMFLAGS_EVENTCALLBACK |
             AUDCLNT_STREAMFLAGS_AUTOCONVERTPCM | AUDCLNT_STREAMFLAGS_SRC_DEFAULT_QUALITY,
