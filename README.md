@@ -26,11 +26,23 @@ The release executable is statically linked and needs no MSYS2 DLLs. It is unsig
 
 ## How to run
 
-1. Download `salvoq.exe` from GitHub Releases and optionally download `SHA256SUMS.txt`.
+1. Download [`salvoq.exe`](https://github.com/SalpyDev/Salvoq/releases/download/v1.0.0-rc11/salvoq.exe) from GitHub Releases and optionally download `SHA256SUMS.txt`.
 2. Verify it with `CertUtil -hashfile salvoq.exe SHA256` or `sha256sum salvoq.exe`.
-3. Open Windows Terminal and run `./salvoq.exe` from its folder.
+3. Open PowerShell or Windows Terminal and change to the folder containing the executable, for example:
+
+	```powershell
+	cd "$HOME\Downloads"
+	.\salvoq.exe
+	```
+
+	PowerShell does not search the current directory when resolving commands, so `salvoq` by itself fails unless the executable's folder has been added to `PATH`. Use `.\salvoq.exe` from that folder, or use the full path:
+
+	```powershell
+	& "C:\Path\To\salvoq.exe" --theme neon --tint-strength 80
+	```
+
 4. Play audio. The bars follow the default playback device.
-5. Use `./salvoq.exe --test-tone` when no audio hardware is available.
+5. Use `.\salvoq.exe --test-tone` when no audio hardware is available.
 6. Press `q` or `Ctrl-C` to quit.
 
 The reference classic presentation uses 26 grouped bars, a black background, one-cell gaps, a green-to-yellow-to-red vertical gradient, colored lower-band tinting, centered band labels, and no peak-marker glyphs.
@@ -74,11 +86,11 @@ The classic palette is green `#00E676`, yellow `#FFEA00`, red `#FF1744`, with ba
 Examples:
 
 ```sh
-salvoq --theme neon --tint-strength 80
-salvoq --gradient "#001F3F,#0074D9,#7FDBFF" --mirror on
-salvoq --band-color bass=#FF00FF --band-color treble=#00FFFF
-salvoq --bg '#000000' --color-depth truecolor --charset ascii
-salvoq --bars 32 --bar-gap on --charset ascii
+.\salvoq.exe --theme neon --tint-strength 80
+.\salvoq.exe --gradient "#001F3F,#0074D9,#7FDBFF" --mirror on
+.\salvoq.exe --band-color bass=#FF00FF --band-color treble=#00FFFF
+.\salvoq.exe --bg '#000000' --color-depth truecolor --charset ascii
+.\salvoq.exe --bars 32 --bar-gap on --charset ascii
 ```
 
 ### Dynamics, frequency, and layout
