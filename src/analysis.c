@@ -36,11 +36,15 @@ static float bin_value(const analysis *a, double freq) {
 void analysis_update(analysis *a, ringbuf *ring, double now_ns) {
     float incoming[SALVOQ_HOP];
     size_t got;
-    while ((got = rb_read(ring, incoming, SALVOQ_HOP)) == SALVOQ_HOP) {
+    while ((got = rb_read(ring, incoming, SALVOQ_HOP - a->pending_count)) > 0) {
+        memcpy(a->pending + a->pending_count, incoming, got * sizeof(float));
+        a->pending_count += got;
+        if (a->pending_count < SALVOQ_HOP) break;
         memmove(a->history, a->history + SALVOQ_HOP,
                 (SALVOQ_FFT_SIZE - SALVOQ_HOP) * sizeof(float));
-        memcpy(a->history + SALVOQ_FFT_SIZE - SALVOQ_HOP, incoming,
+        memcpy(a->history + SALVOQ_FFT_SIZE - SALVOQ_HOP, a->pending,
                SALVOQ_HOP * sizeof(float));
+        a->pending_count = 0;
         window_apply(a->history, a->re, SALVOQ_FFT_SIZE);
         memset(a->im, 0, sizeof a->im);
         fft_forward(a->re, a->im, SALVOQ_FFT_SIZE);

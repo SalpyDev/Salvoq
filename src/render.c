@@ -48,17 +48,15 @@ static float visual_value(const analysis *a, int visual_index, int visual_bars) 
     return value;
 }
 
-static float visual_peak(const analysis *a, int visual_index, int visual_bars) {
-    int first = visual_index * a->bars / visual_bars;
-    int last = (visual_index + 1) * a->bars / visual_bars;
-    float peak = 0.0f;
-    for (int i = first; i < last; i++)
-        if (a->peaks[i] > peak) peak = a->peaks[i];
-    return peak;
-}
-
 void render_frame(canvas *c, analysis *a, const theme *t, const char *status) {
     canvas_clear(c);
+    canvas_set_color_depth(c, t->color_depth);
+    if (t->has_bg) {
+        uint8_t background[6] = {0, 0, 0, t->bg.rgb[0], t->bg.rgb[1], t->bg.rgb[2]};
+        for (int y = 0; y < c->rows; y++)
+            for (int x = 0; x < c->cols; x++)
+                canvas_set(c, x, y, " ", background);
+    }
     int meter_rows = c->rows - 2;
     if (meter_rows < 1 || c->cols < 20) {
         canvas_set(c, 0, 0, "terminal too small", (uint8_t[6]){255,255,255,0,0,0});
@@ -76,8 +74,11 @@ void render_frame(canvas *c, analysis *a, const theme *t, const char *status) {
         float v = visual_value(a, i, visual_bars);
         int x0 = left + i * unit;
         for (int r = 0; r < meter_rows; r++) {
-            float th = (float)r / (meter_rows - 1);
-            float level = (float)(meter_rows - 1 - r) / meter_rows;
+            int center = (meter_rows - 1) / 2;
+            int distance = t->mirror ? abs(r - center) : meter_rows - 1 - r;
+            int span = t->mirror ? (center > meter_rows - 1 - center ? center : meter_rows - 1 - center) : meter_rows - 1;
+            float th = t->mirror ? (float)distance / (span > 0 ? span : 1) : (float)r / (meter_rows - 1);
+            float level = (float)distance / meter_rows;
             if (v <= level) continue;
             color base;
             gradient_color(t, th, &base);
@@ -90,14 +91,6 @@ void render_frame(canvas *c, analysis *a, const theme *t, const char *status) {
             }
             for (int x = 0; x < bar_w; x++)
                 canvas_set(c, x0 + x, r, t->ascii ? "#" : blocks[7], (uint8_t[6]){out.rgb[0], out.rgb[1], out.rgb[2], 0,0,0});
-        }
-        float peak = visual_peak(a, i, visual_bars);
-        if (peak > 0.01f) {
-            int py = meter_rows - 1 - (int)(peak * (meter_rows - 1));
-            if (py >= 0 && py < meter_rows) {
-                canvas_set(c, x0, py, "[", (uint8_t[6]){255,255,255,0,0,0});
-                if (bar_w > 2) canvas_set(c, x0 + bar_w - 1, py, "]", (uint8_t[6]){255,255,255,0,0,0});
-            }
         }
     }
     const char *labels[3] = {"BASS", "MIDS", "TREBLE"};

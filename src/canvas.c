@@ -8,11 +8,14 @@
 
 void canvas_init(canvas *c, int cols, int rows) {
     c->cols = cols; c->rows = rows;
+    c->color_depth = -1;
     c->front = calloc((size_t)cols * rows, sizeof(cell));
     c->back = calloc((size_t)cols * rows, sizeof(cell));
     strcpy(c->front[0].glyph, " ");
     strcpy(c->back[0].glyph, " ");
 }
+
+void canvas_set_color_depth(canvas *c, int color_depth) { c->color_depth = color_depth; }
 
 void canvas_free(canvas *c) { free(c->front); free(c->back); c->front = c->back = NULL; }
 void canvas_clear(canvas *c) {
@@ -37,17 +40,31 @@ void canvas_flush(canvas *c) {
     size_t n = 0;
     n += (size_t)snprintf(out + n, sizeof out - n, "\x1b[?2026h");
     int last_fg[3] = {-1, -1, -1}, last_bg[3] = {-1, -1, -1};
+    int depth = c->color_depth;
+    if (depth < 0) {
+        const char *wt = getenv("WT_SESSION");
+        const char *color_term = getenv("COLORTERM");
+        depth = wt || (color_term && (!strcmp(color_term, "truecolor") || !strcmp(color_term, "24bit"))) ? 2 : 1;
+    }
     for (int y = 0; y < c->rows; y++) {
         for (int x = 0; x < c->cols; x++) {
             cell *a = &c->front[y * c->cols + x], *b = &c->back[y * c->cols + x];
             if (!strcmp(a->glyph, b->glyph) && !memcmp(a, b, sizeof(cell))) continue;
             n += (size_t)snprintf(out + n, sizeof out - n, "\x1b[%d;%dH", y + 1, x + 1);
-            if (memcmp(last_fg, &b->fr, 3)) {
-                n += (size_t)snprintf(out + n, sizeof out - n, "\x1b[38;2;%d;%d;%dm", b->fr, b->fg, b->fb);
+            if (depth > 0 && memcmp(last_fg, &b->fr, 3)) {
+                if (depth == 2) n += (size_t)snprintf(out + n, sizeof out - n, "\x1b[38;2;%d;%d;%dm", b->fr, b->fg, b->fb);
+                else {
+                    int r = (b->fr * 5 + 127) / 255, g = (b->fg * 5 + 127) / 255, bl = (b->fb * 5 + 127) / 255;
+                    n += (size_t)snprintf(out + n, sizeof out - n, "\x1b[38;5;%dm", 16 + 36 * r + 6 * g + bl);
+                }
                 memcpy(last_fg, &b->fr, 3);
             }
-            if (memcmp(last_bg, &b->br, 3)) {
-                n += (size_t)snprintf(out + n, sizeof out - n, "\x1b[48;2;%d;%d;%dm", b->br, b->bg, b->bb);
+            if (depth > 0 && memcmp(last_bg, &b->br, 3)) {
+                if (depth == 2) n += (size_t)snprintf(out + n, sizeof out - n, "\x1b[48;2;%d;%d;%dm", b->br, b->bg, b->bb);
+                else {
+                    int r = (b->br * 5 + 127) / 255, g = (b->bg * 5 + 127) / 255, bl = (b->bb * 5 + 127) / 255;
+                    n += (size_t)snprintf(out + n, sizeof out - n, "\x1b[48;5;%dm", 16 + 36 * r + 6 * g + bl);
+                }
                 memcpy(last_bg, &b->br, 3);
             }
             n += (size_t)snprintf(out + n, sizeof out - n, "%s", b->glyph);

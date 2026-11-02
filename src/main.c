@@ -104,14 +104,15 @@ int main(int argc, char **argv) {
         else if (!strcmp(a, "--charset") && i + 1 < argc) { const char *v = argv[++i]; if (!strcmp(v, "ascii")) th.ascii = 1; else if (strcmp(v, "blocks")) { usage(stderr); return 1; } }
         else if (!strcmp(a, "--color-depth") && i + 1 < argc) { const char *v = argv[++i]; if (!strcmp(v, "truecolor")) th.color_depth = 2; else if (!strcmp(v, "256")) th.color_depth = 1; else if (!strcmp(v, "none")) th.color_depth = 0; else if (strcmp(v, "auto")) { usage(stderr); return 1; } }
         else if (!strcmp(a, "--peak-color") && i + 1 < argc) { if (parse_color(argv[++i], th.peak.rgb)) { usage(stderr); return 1; } }
-        else if (!strcmp(a, "--bg") && i + 1 < argc) { if (parse_color(argv[++i], th.bg.rgb)) { usage(stderr); return 1; } }
+        else if (!strcmp(a, "--bg") && i + 1 < argc) { if (parse_color(argv[++i], th.bg.rgb)) { usage(stderr); return 1; } th.has_bg = 1; }
         else if (!strcmp(a, "--band-color") && i + 1 < argc) {
             char *v = argv[++i], *eq = strchr(v, '=');
             uint8_t rgb[3];
             if (!eq || parse_color(eq + 1, rgb)) { usage(stderr); return 1; }
-            if (!strcmp(v, "bass")) memcpy(th.bass.rgb, rgb, 3);
-            else if (!strcmp(v, "mids")) memcpy(th.mids.rgb, rgb, 3);
-            else if (!strcmp(v, "treble")) memcpy(th.treble.rgb, rgb, 3);
+            size_t name_len = (size_t)(eq - v);
+            if (name_len == 4 && !strncmp(v, "bass", name_len)) memcpy(th.bass.rgb, rgb, 3);
+            else if (name_len == 4 && !strncmp(v, "mids", name_len)) memcpy(th.mids.rgb, rgb, 3);
+            else if (name_len == 6 && !strncmp(v, "treble", name_len)) memcpy(th.treble.rgb, rgb, 3);
             else { usage(stderr); return 1; }
         }
         else if (!strcmp(a, "--gradient") && i + 1 < argc) {
@@ -159,9 +160,12 @@ int main(int argc, char **argv) {
     int current_fps = fps;
 
     while (atomic_load(&running)) {
-        plat_size(&cols, &rows);
-        if (cols != cv.cols || rows != cv.rows) {
+        int next_cols = cols, next_rows = rows;
+        if (plat_size(&next_cols, &next_rows) == 0 && next_cols >= 1 && next_rows >= 1 &&
+            (next_cols != cv.cols || next_rows != cv.rows)) {
             canvas_free(&cv);
+            cols = next_cols;
+            rows = next_rows;
             canvas_init(&cv, cols, rows);
         }
         int all_zero = 1;

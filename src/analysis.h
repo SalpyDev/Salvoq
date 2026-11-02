@@ -4,6 +4,8 @@
 #include "ringbuf.h"
 typedef struct {
     float history[SALVOQ_FFT_SIZE];
+    float pending[SALVOQ_HOP];
+    size_t pending_count;
     float re[SALVOQ_FFT_SIZE], im[SALVOQ_FFT_SIZE], mag[SALVOQ_FFT_SIZE / 2 + 1];
     float values[128], peaks[128];
     double peak_time[128];
