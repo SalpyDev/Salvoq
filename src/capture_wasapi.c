@@ -5,6 +5,7 @@
 #include <mmdeviceapi.h>
 #include <audioclient.h>
 #include <propkey.h>
+#include <devpkey.h>
 #include <stdio.h>
 #include <string.h>
 #include <wctype.h>
