@@ -3,10 +3,23 @@
 #include <windows.h>
 #include <timeapi.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include "platform.h"
 
 static LARGE_INTEGER qpf;
 static HANDLE high_res_timer;
+
+typedef struct {
+    void (*fn)(void *);
+    void *arg;
+} thread_call;
+
+static DWORD WINAPI thread_entry(void *arg) {
+    thread_call *call = arg;
+    call->fn(call->arg);
+    free(call);
+    return 0;
+}
 
 static void platform_once(void) {
     QueryPerformanceFrequency(&qpf);
@@ -37,8 +50,12 @@ void plat_sleep_ns(uint64_t ns) {
 }
 
 int plat_thread_create(plat_thread *t, void (*fn)(void *), void *arg) {
-    HANDLE h = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)fn, arg, 0, NULL);
-    if (!h) return -1;
+    thread_call *call = malloc(sizeof *call);
+    if (!call) return -1;
+    call->fn = fn;
+    call->arg = arg;
+    HANDLE h = CreateThread(NULL, 0, thread_entry, call, 0, NULL);
+    if (!h) { free(call); return -1; }
     *t = h;
     return 0;
 }
