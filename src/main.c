@@ -176,7 +176,6 @@ int main(int argc, char **argv) {
             current_fps, rb_fill(&sources[0].cap.ring) * 100 / SALVOQ_RING_CAPACITY, drops,
             test ? " | TEST TONE" : (apps ? " | APP" : ""));
         render_frame(&cv, &sources[0].an, &th, status);
-        uint64_t now = plat_now_ns();
         next += 1000000000ULL / (unsigned)current_fps;
         uint64_t now2 = plat_now_ns();
         if (next > now2) plat_sleep_ns(next - now2); else next = now2;
