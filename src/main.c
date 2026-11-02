@@ -156,8 +156,7 @@ int main(int argc, char **argv) {
     plat_size(&cols, &rows);
     canvas_init(&cv, cols, rows);
     uint64_t next = plat_now_ns();
-    unsigned long frames = 0, drops = 0;
-    uint64_t fps_t0 = next;
+    unsigned long drops = 0;
     int current_fps = fps;
 
     while (atomic_load(&running)) {
@@ -177,9 +176,7 @@ int main(int argc, char **argv) {
             current_fps, rb_fill(&sources[0].cap.ring) * 100 / SALVOQ_RING_CAPACITY, drops,
             test ? " | TEST TONE" : (apps ? " | APP" : ""));
         render_frame(&cv, &sources[0].an, &th, status);
-        frames++;
         uint64_t now = plat_now_ns();
-        if (now - fps_t0 >= 1000000000ULL) { fps_t0 = now; frames = 0; }
         next += 1000000000ULL / (unsigned)current_fps;
         uint64_t now2 = plat_now_ns();
         if (next > now2) plat_sleep_ns(next - now2); else next = now2;
