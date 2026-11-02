@@ -13,6 +13,11 @@
 #include "platform.h"
 #include "common.h"
 
+static const PROPERTYKEY salvoq_device_friendly_name = {
+    {0xa45c254e, 0xdf1c, 0x4efd, {0x80, 0x20, 0x67, 0xd1, 0x46, 0xa8, 0x50, 0xe0}},
+    14
+};
+
 static void push_silence(capture_source *s, uint64_t t0, uint64_t *pushed) {
     uint64_t due = ((plat_now_ns() - t0) * SALVOQ_SAMPLE_RATE / 1000000000ULL) - *pushed;
     if (due > SALVOQ_SAMPLE_RATE) { t0 = plat_now_ns(); *pushed = 0; due = 0; }
@@ -94,7 +99,7 @@ static void wasapi_thread(void *arg) {
                 PropVariantInit(&v);
             if (FAILED(IMMDeviceCollection_Item(col, i, &d))) continue;
             if (SUCCEEDED(IMMDevice_OpenPropertyStore(d, STGM_READ, &store)) &&
-                SUCCEEDED(IPropertyStore_GetValue(store, &PKEY_Device_FriendlyName, &v))) {
+                SUCCEEDED(IPropertyStore_GetValue(store, &salvoq_device_friendly_name, &v))) {
                 if (v.pwszVal && wide_contains_ascii_ci(v.pwszVal, want)) { PropVariantClear(&v); dev = d; break; }
                 PropVariantClear(&v);
             }
