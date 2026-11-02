@@ -7,7 +7,7 @@
 #include "platform.h"
 #include "common.h"
 
-static DWORD WINAPI test_thread(void *arg) {
+static void test_thread(void *arg) {
     capture_source *s = arg;
     uint64_t t0 = plat_now_ns(), pushed = 0;
     float block[512];
@@ -28,7 +28,7 @@ static DWORD WINAPI test_thread(void *arg) {
         if (due > SALVOQ_SAMPLE_RATE) { t0 = plat_now_ns(); pushed = 0; }
         else if (due < 512) plat_sleep_ns((512 - due) * 1000000000ULL / SALVOQ_SAMPLE_RATE);
     }
-    return 0;
+    return;
 }
 
 int capture_start_test(capture_source *s) {

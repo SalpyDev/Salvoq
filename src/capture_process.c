@@ -12,7 +12,7 @@
 #include "platform.h"
 #include "common.h"
 
-static DWORD WINAPI process_thread(void *arg) {
+static void process_thread(void *arg) {
     capture_source *s = arg;
     wchar_t wname[128];
     size_t n = strlen(s->name);
@@ -24,7 +24,7 @@ static DWORD WINAPI process_thread(void *arg) {
     fprintf(stderr, "salvoq: process loopback for %s (PID %lu)\n", s->name, (unsigned long)pid);
     fprintf(stderr, "salvoq: --app process loopback is not available in this build\n");
     exit(2);
-    return 0;
+    return;
 }
 
 int capture_start_process(capture_source *s, const char *app) {

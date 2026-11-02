@@ -4,9 +4,10 @@
 #include <windows.h>
 #include <mmdeviceapi.h>
 #include <audioclient.h>
+#include <propkey.h>
 #include <stdio.h>
 #include <string.h>
-#include <strings.h>
+#include <wctype.h>
 #include "capture.h"
 #include "platform.h"
 #include "common.h"
@@ -25,6 +26,7 @@ static void push_silence(capture_source *s, uint64_t t0, uint64_t *pushed) {
 }
 
 static int wasapi_loop(capture_source *s, IAudioClient *client, IAudioCaptureClient *cap, HANDLE event) {
+    (void)client;
     uint64_t t0 = plat_now_ns(), pushed = 0;
     while (atomic_load(&s->running)) {
         DWORD w = WaitForSingleObject(event, 100);
@@ -52,7 +54,20 @@ static int wasapi_loop(capture_source *s, IAudioClient *client, IAudioCaptureCli
     return 0;
 }
 
-static DWORD WINAPI wasapi_thread(void *arg) {
+static int wide_contains_ascii_ci(const wchar_t *text, const char *needle) {
+    wchar_t wanted[256];
+    size_t length = mbstowcs(wanted, needle, 255);
+    if (length == (size_t)-1) return 0;
+    wanted[length] = L'\0';
+    for (const wchar_t *start = text; *start; start++) {
+        size_t i = 0;
+        while (wanted[i] && start[i] && towlower(start[i]) == towlower(wanted[i])) i++;
+        if (!wanted[i]) return 1;
+    }
+    return 0;
+}
+
+static void wasapi_thread(void *arg) {
     capture_source *s = arg;
     HRESULT hr;
     IMMDeviceEnumerator *enumr = NULL;
@@ -74,11 +89,13 @@ static DWORD WINAPI wasapi_thread(void *arg) {
         for (UINT i = 0; i < count; i++) {
             IMMDevice *d = NULL;
             IPropertyStore *store = NULL;
-            PROPVARIANT v;
+                PROPVARIANT v;
+                PropVariantInit(&v);
             if (FAILED(IMMDeviceCollection_Item(col, i, &d))) continue;
             if (SUCCEEDED(IMMDevice_OpenPropertyStore(d, STGM_READ, &store)) &&
                 SUCCEEDED(IPropertyStore_GetValue(store, &PKEY_Device_FriendlyName, &v))) {
-                if (v.pwszVal && StrStrIW(v.pwszVal, (const WCHAR *)want)) { dev = d; break; }
+                if (v.pwszVal && wide_contains_ascii_ci(v.pwszVal, want)) { PropVariantClear(&v); dev = d; break; }
+                PropVariantClear(&v);
             }
             IMMDevice_Release(d);
         }
@@ -122,7 +139,7 @@ static DWORD WINAPI wasapi_thread(void *arg) {
     if (enumr) IMMDeviceEnumerator_Release(enumr);
     if (event) CloseHandle(event);
     CoUninitialize();
-    return 0;
+    return;
 fail:
     fprintf(stderr, "salvoq: WASAPI capture failed: 0x%08lX (try --test-tone)\n", (unsigned long)hr);
     exit(2);
