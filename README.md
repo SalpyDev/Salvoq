@@ -1,3 +1,11 @@
+
+
+
+https://github.com/user-attachments/assets/37856765-a51d-4a3d-8d4d-d0c2c01feaae
+
+
+
+
 # Salvoq
 
 Salvoq is a zero-dependency, ultra-lightweight native C audio visualizer for Windows. Operating via low-latency WASAPI loopback, it executes real-time system-wide or per-application audio stream capture—including concurrent dual side-by-side feeds—leveraging a custom-built 2048-point radix-2 Cooley-Tukey FFT pipeline to render high-fidelity, discrete frequency spectra directly within Windows Terminal.
