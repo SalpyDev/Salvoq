@@ -57,7 +57,7 @@ The reference classic presentation uses 26 grouped bars, a black background, one
 
 ## Command line
 
-Run `salvoq --help` for the same list printed by the executable. Options may appear in any order. `--help`, `--version`, and `--selftest` act immediately and ignore later options. Repeated options use their last value, except `--app`, which may be given at most twice, and `--band-color`, where each band keeps its last value.
+Run `.\salvoq.exe --help` for the same list printed by the executable. Options may appear in any order. `--help`, `--version`, and `--selftest` act immediately and ignore later options. Repeated options use their last value, except `--app`, which may be given at most twice, and `--band-color`, where each band keeps its last value.
 
 ### Sources and timing
 
@@ -118,10 +118,10 @@ Examples:
 Examples:
 
 ```sh
-salvoq --db-range -100,-10 --tilt 3 --decay 0.92
-salvoq --attack smooth --peak-hold 0 --peak-fall 0
-salvoq --freq-range 40,16000 --bars 32
-salvoq --fps 120 --idle-fps 10 --test-tone
+.\salvoq.exe --db-range -100,-10 --tilt 3 --decay 0.92
+.\salvoq.exe --attack smooth --peak-hold 0 --peak-fall 0
+.\salvoq.exe --freq-range 40,16000 --bars 32
+.\salvoq.exe --fps 120 --idle-fps 10 --test-tone
 ```
 
 ### Per-application capture
@@ -129,9 +129,9 @@ salvoq --fps 120 --idle-fps 10 --test-tone
 `--app NAME` is accepted by the command-line parser, but process-loopback activation is not available in the current rc11 executable. It therefore reports the documented capture failure (exit 2) after validating the process name. `.exe` is added if omitted. The target must already be running, and the planned feature needs Windows 10 version 2004 (build 19041) or later. `SALVOQ_DEVICE` is ignored with `--app`.
 
 ```sh
-salvoq --app spotify.exe
-salvoq --app spotify.exe --app discord.exe --split side
-salvoq --app spotify.exe --app discord.exe --split stacked
+.\salvoq.exe --app spotify.exe
+.\salvoq.exe --app spotify.exe --app discord.exe --split side
+.\salvoq.exe --app spotify.exe --app discord.exe --split stacked
 ```
 
 `--split` accepts `side` or `stacked` and defaults to `side`; it is currently validation-only because process-loopback capture is unavailable. A missing app value, third app, duplicate app, app combined with `--test-tone`, or invalid split mode exits 1. An unknown running app exits 2.

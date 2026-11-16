@@ -1,6 +1,7 @@
 
 #define WIN32_LEAN_AND_MEAN
 #include <stdatomic.h>
+#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -58,6 +59,22 @@ static int valid_theme(const char *name) {
            !strcmp(name, "ocean") || !strcmp(name, "ember") ||
            !strcmp(name, "mono") || !strcmp(name, "synthwave") ||
            !strcmp(name, "luna");
+}
+
+static int same_app_name(const char *left, const char *right) {
+    size_t left_len = strlen(left), right_len = strlen(right);
+    if (left_len > 4 && tolower((unsigned char)left[left_len - 4]) == '.' &&
+        tolower((unsigned char)left[left_len - 3]) == 'e' &&
+        tolower((unsigned char)left[left_len - 2]) == 'x' &&
+        tolower((unsigned char)left[left_len - 1]) == 'e') left_len -= 4;
+    if (right_len > 4 && tolower((unsigned char)right[right_len - 4]) == '.' &&
+        tolower((unsigned char)right[right_len - 3]) == 'e' &&
+        tolower((unsigned char)right[right_len - 2]) == 'x' &&
+        tolower((unsigned char)right[right_len - 1]) == 'e') right_len -= 4;
+    if (left_len != right_len) return 0;
+    for (size_t i = 0; i < left_len; i++)
+        if (tolower((unsigned char)left[i]) != tolower((unsigned char)right[i])) return 0;
+    return 1;
 }
 
 static int parse_color(const char *s, uint8_t out[3]) {
@@ -127,6 +144,8 @@ int main(int argc, char **argv) {
         else if (!strcmp(a, "--style") && i + 1 < argc) { const char *v = argv[++i]; if (!strcmp(v, "polished")) fprintf(stderr, "salvoq: --style polished was removed; using classic\n"); else if (strcmp(v, "classic")) { usage(stderr); return 1; } }
         else if (!strcmp(a, "--app") && i + 1 < argc) {
             if (test || apps >= 2) { usage(stderr); return 1; }
+            for (int app_index = 0; app_index < apps; app_index++)
+                if (same_app_name(app_names[app_index], argv[i + 1])) { usage(stderr); return 1; }
             strncpy(app_names[apps++], argv[++i], 127);
         }
         else if (!strcmp(a, "--split") && i + 1 < argc) { split = argv[++i]; if (strcmp(split, "side") && strcmp(split, "stacked")) { usage(stderr); return 1; } }
