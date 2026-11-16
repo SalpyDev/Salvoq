@@ -157,6 +157,7 @@ int main(int argc, char **argv) {
     plat_size(&cols, &rows);
     canvas_init(&cv, cols, rows);
     uint64_t next = plat_now_ns();
+    uint64_t zero_since = 0;
     int current_fps = fps;
 
     while (atomic_load(&running)) {
@@ -173,7 +174,14 @@ int main(int argc, char **argv) {
             analysis_update(&sources[i].an, &sources[i].cap.ring, (double)plat_now_ns());
             for (int b = 0; b < bars; b++) if (sources[i].an.values[b] > 0) all_zero = 0;
         }
-        current_fps = all_zero ? idle_fps : fps;
+        uint64_t frame_now = plat_now_ns();
+        if (all_zero) {
+            if (zero_since == 0) zero_since = frame_now;
+            current_fps = frame_now - zero_since >= 1000000000ULL ? idle_fps : fps;
+        } else {
+            zero_since = 0;
+            current_fps = fps;
+        }
         char status[128];
         snprintf(status, sizeof status, "\xE2\x80\xBA 44.1kHz \xE2\x80\xA2 sample 1024 \xE2\x80\xA2 gain 0.0dB \xE2\x80\xA2 fps %d", current_fps);
         render_frame(&cv, &sources[0].an, &th, status);

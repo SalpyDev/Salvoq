@@ -118,7 +118,7 @@ salvoq --fps 120 --idle-fps 10 --test-tone
 
 ### Per-application capture
 
-`--app NAME` captures the named running executable and its child-process tree instead of the default device mix. `.exe` is added if omitted. The target must already be running, and this feature needs Windows 10 version 2004 (build 19041) or later. `SALVOQ_DEVICE` is ignored with `--app`.
+`--app NAME` is accepted by the command-line parser, but process-loopback activation is not available in the current rc11 executable. It therefore reports the documented capture failure (exit 2) after validating the process name. `.exe` is added if omitted. The target must already be running, and the planned feature needs Windows 10 version 2004 (build 19041) or later. `SALVOQ_DEVICE` is ignored with `--app`.
 
 ```sh
 salvoq --app spotify.exe
@@ -126,7 +126,7 @@ salvoq --app spotify.exe --app discord.exe --split side
 salvoq --app spotify.exe --app discord.exe --split stacked
 ```
 
-`--split` accepts `side` or `stacked` and defaults to `side`. It is ignored with one app. A missing app value, third app, duplicate app, app combined with `--test-tone`, or invalid split mode exits 1. An unknown running app exits 2.
+`--split` accepts `side` or `stacked` and defaults to `side`; it is currently validation-only because process-loopback capture is unavailable. A missing app value, third app, duplicate app, app combined with `--test-tone`, or invalid split mode exits 1. An unknown running app exits 2.
 
 ## Device selection
 
@@ -141,7 +141,7 @@ If no active endpoint matches, Salvoq prints the error and exits 2. The variable
 
 ## Parsing and exit codes
 
-Missing values, out-of-range values, malformed colors, invalid names, invalid modes, and invalid range ordering print usage to stderr and exit 1. `SALVOQ_TRACE=1` prints per-frame values in debug builds only.
+Missing values, out-of-range values, malformed colors, invalid names, invalid modes, and invalid range ordering print usage to stderr and exit 1.
 
 | Code | Meaning |
 | --- | --- |
